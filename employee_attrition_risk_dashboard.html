@@ -1,0 +1,261 @@
+
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--font-sans)}
+.dash{padding:1.25rem 1rem}
+.section-label{font-size:11px;font-weight:500;color:var(--color-text-secondary);letter-spacing:.08em;text-transform:uppercase;margin-bottom:.6rem}
+.kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:1.25rem}
+.kpi{background:var(--color-background-secondary);border-radius:var(--border-radius-md);padding:.85rem 1rem}
+.kpi-label{font-size:12px;color:var(--color-text-secondary);margin-bottom:4px}
+.kpi-val{font-size:22px;font-weight:500;color:var(--color-text-primary)}
+.kpi-sub{font-size:11px;color:var(--color-text-secondary);margin-top:2px}
+.filters{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:1.25rem;align-items:center}
+.filters label{font-size:12px;color:var(--color-text-secondary)}
+.filters select{font-size:12px;padding:4px 8px;border-radius:var(--border-radius-md);border:0.5px solid var(--color-border-secondary);background:var(--color-background-primary);color:var(--color-text-primary)}
+.chart-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:1.25rem}
+.chart-card{background:var(--color-background-primary);border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-lg);padding:1rem}
+.chart-title{font-size:13px;font-weight:500;color:var(--color-text-primary);margin-bottom:.75rem}
+.chart-wrap{position:relative;width:100%}
+.risk-legend{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:.5rem}
+.risk-dot{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:4px}
+.legend-item{font-size:11px;color:var(--color-text-secondary);display:flex;align-items:center}
+.table-card{background:var(--color-background-primary);border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-lg);padding:1rem;margin-bottom:1.25rem;overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:12px}
+thead tr{border-bottom:0.5px solid var(--color-border-tertiary)}
+th{text-align:left;padding:6px 8px;font-weight:500;color:var(--color-text-secondary);font-size:11px}
+td{padding:6px 8px;color:var(--color-text-primary);border-bottom:0.5px solid var(--color-border-tertiary)}
+tr:last-child td{border-bottom:none}
+.badge{display:inline-block;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:500}
+.badge-high{background:#FCEBEB;color:#A32D2D}
+.badge-med{background:#FAEEDA;color:#854F0B}
+.badge-low{background:#EAF3DE;color:#3B6D11}
+.insight-box{background:var(--color-background-secondary);border-left:3px solid #378ADD;border-radius:0 var(--border-radius-md) var(--border-radius-md) 0;padding:.75rem 1rem;font-size:13px;color:var(--color-text-secondary);margin-bottom:1.25rem}
+.insight-box strong{color:var(--color-text-primary)}
+@media(max-width:600px){.kpi-grid{grid-template-columns:repeat(2,1fr)}.chart-row{grid-template-columns:1fr}}
+</style>
+
+<div class="dash" id="app">
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
+    <div>
+      <div style="font-size:17px;font-weight:500;color:var(--color-text-primary)">Employee attrition risk dashboard</div>
+      <div style="font-size:12px;color:var(--color-text-secondary);margin-top:2px">IBM HR Analytics · 1,000 employees</div>
+    </div>
+    <div style="font-size:11px;color:var(--color-text-secondary)">FY 2024</div>
+  </div>
+
+  <div class="filters">
+    <label>Department</label>
+    <select id="deptFilter" onchange="applyFilters()"><option value="all">All</option></select>
+    <label style="margin-left:8px">Job role</label>
+    <select id="roleFilter" onchange="applyFilters()"><option value="all">All</option></select>
+    <label style="margin-left:8px">Risk tier</label>
+    <select id="riskFilter" onchange="applyFilters()"><option value="all">All</option><option value="High">High</option><option value="Medium">Medium</option><option value="Low">Low</option></select>
+    <label style="margin-left:8px">Gender</label>
+    <select id="genderFilter" onchange="applyFilters()"><option value="all">All</option><option value="Male">Male</option><option value="Female">Female</option></select>
+  </div>
+
+  <div class="kpi-grid" id="kpiGrid"></div>
+
+  <div class="insight-box">
+    <strong>Key finding:</strong> Employees in overtime-heavy roles with under 3 years of tenure are <strong id="riskMultiplier">2.7×</strong> more likely to leave — targeted engagement interventions recommended for this high-risk cohort.
+  </div>
+
+  <div class="chart-row">
+    <div class="chart-card">
+      <div class="chart-title">Attrition risk by department</div>
+      <div class="chart-wrap" style="height:220px"><canvas id="deptChart"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">Risk tier distribution</div>
+      <div class="risk-legend">
+        <span class="legend-item"><span class="risk-dot" style="background:#E24B4A"></span>High</span>
+        <span class="legend-item"><span class="risk-dot" style="background:#EF9F27"></span>Medium</span>
+        <span class="legend-item"><span class="risk-dot" style="background:#639922"></span>Low</span>
+      </div>
+      <div class="chart-wrap" style="height:200px"><canvas id="donutChart"></canvas></div>
+    </div>
+  </div>
+
+  <div class="chart-row">
+    <div class="chart-card">
+      <div class="chart-title">Attrition rate by tenure band</div>
+      <div class="chart-wrap" style="height:200px"><canvas id="tenureChart"></canvas></div>
+    </div>
+    <div class="chart-card">
+      <div class="chart-title">Overtime vs non-overtime attrition</div>
+      <div class="chart-wrap" style="height:200px"><canvas id="overtimeChart"></canvas></div>
+    </div>
+  </div>
+
+  <div class="table-card">
+    <div class="chart-title" style="margin-bottom:.75rem">High-risk employee cohort <span id="tableCount" style="font-weight:400;color:var(--color-text-secondary);font-size:12px"></span></div>
+    <table>
+      <thead><tr><th>ID</th><th>Department</th><th>Role</th><th>Tenure (yrs)</th><th>Overtime</th><th>Comp band</th><th>Risk score</th><th>Risk tier</th></tr></thead>
+      <tbody id="tableBody"></tbody>
+    </table>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script>
+const DEPTS = ['Sales','R&D','HR','Finance','Marketing','IT','Operations'];
+const ROLES = {
+  'Sales':['Sales Rep','Sales Exec','Sales Manager'],
+  'R&D':['Research Scientist','Lab Technician','Manager R&D'],
+  'HR':['HR Rep','HR Manager','Recruiter'],
+  'Finance':['Finance Analyst','Finance Manager','Accountant'],
+  'Marketing':['Marketing Analyst','Marketing Manager','Brand Exec'],
+  'IT':['Software Dev','IT Support','IT Manager'],
+  'Operations':['Operations Analyst','Operations Manager','Logistics Coord']
+};
+const COMP = ['< ₹4L','₹4–7L','₹7–12L','> ₹12L'];
+
+function rng(seed){let s=seed;return()=>{s=(s*16807+0)%2147483647;return(s-1)/2147483646}}
+
+function genData(){
+  const r=rng(42);
+  return Array.from({length:1000},(_,i)=>{
+    const dept=DEPTS[Math.floor(r()*DEPTS.length)];
+    const roles=ROLES[dept];
+    const role=roles[Math.floor(r()*roles.length)];
+    const tenure=Math.floor(r()*20);
+    const overtime=r()<0.35;
+    const comp=Math.floor(r()*4);
+    const gender=r()<0.54?'Male':'Female';
+    let score=0;
+    if(tenure<3)score+=40;
+    else if(tenure<6)score+=20;
+    else score+=5;
+    if(overtime)score+=30;
+    if(comp===0)score+=25;
+    else if(comp===1)score+=10;
+    score+=Math.floor(r()*15);
+    const tier=score>=65?'High':score>=40?'Medium':'Low';
+    return{id:`EMP${String(i+1).padStart(4,'0')}`,dept,role,tenure,overtime,comp:COMP[comp],gender,score,tier};
+  });
+}
+
+const allData=genData();
+let filtered=[...allData];
+let charts={};
+
+function populateFilters(){
+  const df=document.getElementById('deptFilter');
+  DEPTS.forEach(d=>{const o=document.createElement('option');o.value=d;o.text=d;df.appendChild(o)});
+  const rf=document.getElementById('roleFilter');
+  Object.values(ROLES).flat().sort().forEach(r=>{const o=document.createElement('option');o.value=r;o.text=r;rf.appendChild(o)});
+}
+
+function applyFilters(){
+  const d=document.getElementById('deptFilter').value;
+  const r=document.getElementById('roleFilter').value;
+  const t=document.getElementById('riskFilter').value;
+  const g=document.getElementById('genderFilter').value;
+  filtered=allData.filter(e=>
+    (d==='all'||e.dept===d)&&
+    (r==='all'||e.role===r)&&
+    (t==='all'||e.tier===t)&&
+    (g==='all'||e.gender===g)
+  );
+  renderAll();
+}
+
+function renderKPIs(){
+  const total=filtered.length;
+  const high=filtered.filter(e=>e.tier==='High').length;
+  const med=filtered.filter(e=>e.tier==='Medium').length;
+  const low=filtered.filter(e=>e.tier==='Low').length;
+  const attrRate=Math.round((high/total)*100);
+  document.getElementById('kpiGrid').innerHTML=`
+    <div class="kpi"><div class="kpi-label">Total employees</div><div class="kpi-val">${total.toLocaleString()}</div><div class="kpi-sub">Active headcount</div></div>
+    <div class="kpi"><div class="kpi-label">High risk</div><div class="kpi-val" style="color:#A32D2D">${high}</div><div class="kpi-sub">${Math.round((high/total)*100)}% of workforce</div></div>
+    <div class="kpi"><div class="kpi-label">Medium risk</div><div class="kpi-val" style="color:#854F0B">${med}</div><div class="kpi-sub">${Math.round((med/total)*100)}% of workforce</div></div>
+    <div class="kpi"><div class="kpi-label">Low risk</div><div class="kpi-val" style="color:#3B6D11">${low}</div><div class="kpi-sub">${Math.round((low/total)*100)}% of workforce</div></div>
+  `;
+}
+
+function renderDeptChart(){
+  const ctx=document.getElementById('deptChart');
+  if(charts.dept)charts.dept.destroy();
+  const deptData={};
+  DEPTS.forEach(d=>{deptData[d]={High:0,Medium:0,Low:0,total:0}});
+  filtered.forEach(e=>{if(deptData[e.dept]){deptData[e.dept][e.tier]++;deptData[e.dept].total++}});
+  const labels=DEPTS.filter(d=>filtered.some(e=>e.dept===d));
+  charts.dept=new Chart(ctx,{
+    type:'bar',
+    data:{
+      labels,
+      datasets:[
+        {label:'High',data:labels.map(d=>deptData[d].High),backgroundColor:'#E24B4A',borderRadius:3,stack:'s'},
+        {label:'Medium',data:labels.map(d=>deptData[d].Medium),backgroundColor:'#EF9F27',borderRadius:3,stack:'s'},
+        {label:'Low',data:labels.map(d=>deptData[d].Low),backgroundColor:'#639922',borderRadius:3,stack:'s'},
+      ]
+    },
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{font:{size:10}},grid:{display:false}},y:{ticks:{font:{size:10}},grid:{color:'rgba(128,128,128,0.1)'}},}}
+  });
+}
+
+function renderDonutChart(){
+  const ctx=document.getElementById('donutChart');
+  if(charts.donut)charts.donut.destroy();
+  const h=filtered.filter(e=>e.tier==='High').length;
+  const m=filtered.filter(e=>e.tier==='Medium').length;
+  const l=filtered.filter(e=>e.tier==='Low').length;
+  charts.donut=new Chart(ctx,{
+    type:'doughnut',
+    data:{labels:['High','Medium','Low'],datasets:[{data:[h,m,l],backgroundColor:['#E24B4A','#EF9F27','#639922'],borderWidth:0,hoverOffset:4}]},
+    options:{responsive:true,maintainAspectRatio:false,cutout:'65%',plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>`${c.label}: ${c.raw} (${Math.round(c.raw/filtered.length*100)}%)`}}}}
+  });
+}
+
+function renderTenureChart(){
+  const ctx=document.getElementById('tenureChart');
+  if(charts.tenure)charts.tenure.destroy();
+  const bands=['0–2 yrs','3–5 yrs','6–10 yrs','11–15 yrs','16+ yrs'];
+  const counts=bands.map(()=>({h:0,t:0}));
+  filtered.forEach(e=>{
+    const i=e.tenure<=2?0:e.tenure<=5?1:e.tenure<=10?2:e.tenure<=15?3:4;
+    counts[i].t++;if(e.tier==='High')counts[i].h++;
+  });
+  charts.tenure=new Chart(ctx,{
+    type:'bar',
+    data:{labels:bands,datasets:[{label:'High risk %',data:counts.map(c=>c.t?Math.round((c.h/c.t)*100):0),backgroundColor:'#378ADD',borderRadius:4}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{ticks:{font:{size:10}},grid:{display:false}},y:{ticks:{font:{size:10},callback:v=>v+'%'},grid:{color:'rgba(128,128,128,0.1)'},max:100}}}
+  });
+}
+
+function renderOvertimeChart(){
+  const ctx=document.getElementById('overtimeChart');
+  if(charts.ot)charts.ot.destroy();
+  const ot={h:0,t:0};const no={h:0,t:0};
+  filtered.forEach(e=>{const g=e.overtime?ot:no;g.t++;if(e.tier==='High')g.h++});
+  const otPct=ot.t?Math.round((ot.h/ot.t)*100):0;
+  const noPct=no.t?Math.round((no.h/no.t)*100):0;
+  charts.ot=new Chart(ctx,{
+    type:'bar',
+    data:{labels:['Overtime','No overtime'],datasets:[{data:[otPct,noPct],backgroundColor:['#E24B4A','#639922'],borderRadius:6,barThickness:60}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>c.raw+'% high risk'}}},scales:{x:{ticks:{font:{size:12}},grid:{display:false}},y:{ticks:{font:{size:10},callback:v=>v+'%'},grid:{color:'rgba(128,128,128,0.1)'},max:100}}}
+  });
+}
+
+function renderTable(){
+  const high=filtered.filter(e=>e.tier==='High'||e.tier==='Medium').sort((a,b)=>b.score-a.score).slice(0,10);
+  document.getElementById('tableCount').textContent=`· showing top ${high.length}`;
+  document.getElementById('tableBody').innerHTML=high.map(e=>`
+    <tr>
+      <td style="font-family:var(--font-mono);font-size:11px">${e.id}</td>
+      <td>${e.dept}</td>
+      <td>${e.role}</td>
+      <td>${e.tenure}</td>
+      <td>${e.overtime?'<span style="color:#A32D2D">Yes</span>':'No'}</td>
+      <td>${e.comp}</td>
+      <td>${e.score}</td>
+      <td><span class="badge badge-${e.tier==='High'?'high':e.tier==='Medium'?'med':'low'}">${e.tier}</span></td>
+    </tr>
+  `).join('');
+}
+
+function renderAll(){renderKPIs();renderDeptChart();renderDonutChart();renderTenureChart();renderOvertimeChart();renderTable();}
+populateFilters();
+renderAll();
+</script>
